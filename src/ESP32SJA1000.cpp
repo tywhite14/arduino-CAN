@@ -3,7 +3,9 @@
 
 #ifdef ARDUINO_ARCH_ESP32
 
-#include "esp_intr.h"
+#include "esp_intr_alloc.h"
+#include "rom/gpio.h"
+#include "soc/interrupts.h"
 #include "soc/dport_reg.h"
 #include "driver/gpio.h"
 
@@ -121,7 +123,7 @@ int ESP32SJA1000Class::begin(long baudRate)
   }
 
   modifyRegister(REG_BTR1, 0x80, 0x80); // SAM = 1
-  writeRegister(REG_IER, 0xff); // enable all interrupts
+  writeRegister(REG_IER, 0xef); // enable all interrupts
 
   // set filter to allow anything
   writeRegister(REG_ACRn(0), 0x00);
@@ -168,9 +170,9 @@ int ESP32SJA1000Class::endPacket()
     return 0;
   }
 
-  // wait for TX buffer to free
-  while ((readRegister(REG_SR) & 0x04) != 0x04) {
-    yield();
+  // return if TX buffer is not free
+  if ((readRegister(REG_SR) & 0x04) != 0x04) {
+    return 0;
   }
 
   int dataReg;
@@ -201,15 +203,6 @@ int ESP32SJA1000Class::endPacket()
   } else {
     // transmit request
     modifyRegister(REG_CMR, 0x1f, 0x01);
-  }
-
-  // wait for TX complete
-  while ((readRegister(REG_SR) & 0x08) != 0x08) {
-    if (readRegister(REG_ECC) == 0xd9) {
-      modifyRegister(REG_CMR, 0x1f, 0x02); // error, abort
-      return 0;
-    }
-    yield();
   }
 
   return 1;
@@ -297,7 +290,7 @@ int ESP32SJA1000Class::filter(int id, int mask)
 int ESP32SJA1000Class::filterExtended(long id, long mask)
 {
   id &= 0x1FFFFFFF;
-  mask &= ~(mask & 0x1FFFFFFF);
+  mask = ~(mask & 0x1FFFFFFF);
 
   modifyRegister(REG_MOD, 0x17, 0x01); // reset
 
