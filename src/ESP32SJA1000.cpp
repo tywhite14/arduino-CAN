@@ -3,7 +3,9 @@
 
 #ifdef ARDUINO_ARCH_ESP32
 
-#include "esp_intr.h"
+#include "esp_intr_alloc.h"
+#include "rom/gpio.h"
+#include "soc/interrupts.h"
 #include "soc/dport_reg.h"
 #include "driver/gpio.h"
 
@@ -53,8 +55,8 @@ int ESP32SJA1000Class::begin(long baudRate)
 
   _loopback = false;
 
-  DPORT_CLEAR_PERI_REG_MASK(DPORT_PERIP_RST_EN_REG, DPORT_CAN_RST);
-  DPORT_SET_PERI_REG_MASK(DPORT_PERIP_CLK_EN_REG, DPORT_CAN_CLK_EN);
+	  DPORT_CLEAR_PERI_REG_MASK(DPORT_PERIP_RST_EN_REG, DPORT_CAN_RST);
+    DPORT_SET_PERI_REG_MASK(DPORT_PERIP_CLK_EN_REG, DPORT_CAN_CLK_EN);
 
   // RX pin
   gpio_set_direction(_rxPin, GPIO_MODE_INPUT);
@@ -63,7 +65,7 @@ int ESP32SJA1000Class::begin(long baudRate)
 
   // TX pin
   gpio_set_direction(_txPin, GPIO_MODE_OUTPUT);
-  gpio_matrix_out(_txPin, CAN_TX_IDX, 0, 0);
+    gpio_matrix_out(_txPin, CAN_TX_IDX, 0, 0);
   gpio_pad_select_gpio(_txPin);
 
   modifyRegister(REG_CDR, 0x80, 0x80); // pelican mode
@@ -259,7 +261,7 @@ void ESP32SJA1000Class::onReceive(void(*callback)(int))
   }
 
   if (callback) {
-    esp_intr_alloc(ETS_CAN_INTR_SOURCE, 0, ESP32SJA1000Class::onInterrupt, this, &_intrHandle);
+	  esp_intr_alloc(ETS_CAN_INTR_SOURCE, 0, ESP32SJA1000Class::onInterrupt, this, &_intrHandle);
   }
 }
 
